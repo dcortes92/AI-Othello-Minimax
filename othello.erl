@@ -162,5 +162,3 @@ print_val(0, Pos, Frontier)  ->
 print_val( 1, _, _) -> io:format("X", []);
 print_val(-1, _, _) -> io:format("O", []).
 
-
-
