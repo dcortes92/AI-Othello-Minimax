@@ -97,5 +97,16 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
 	    ok
     end.
     
-make_move(_Player, _Board, _Depth, _Border) -> {1,1}.
+make_move(Player, Board, _Depth, _Border) -> {1,1}.
 
+%Obtiene los posibles movimientos de un jugador
+%Se le envia una lista de 12 -> 89
+posibles_movimientos([H|T]) ->
+	Valido = othello:check_move(H, othello:board(), othello:directions(), -1),
+	if Valido ->
+		[H |  posibles_movimientos(T)];
+	true ->
+		posibles_movimientos(T)
+	end;
+
+posibles_movimientos([]) -> [].
