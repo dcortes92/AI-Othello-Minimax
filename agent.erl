@@ -97,7 +97,7 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
 	    ok
     end.
     
-make_move(Player, Board, _Depth, _Border) -> {1,1}.
+make_move(Player, Board, _Depth, _Border) -> 57. %Esta tupla se cambia por un número
 
 %Obtiene los posibles movimientos de un jugador
 %Se le envía una lista con todos los posibles movimientos de un jugador
