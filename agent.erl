@@ -101,9 +101,10 @@ make_move(Player, Board, _Depth, _Border) -> {1,1}.
 
 %Obtiene los posibles movimientos de un jugador
 %Se le envía una lista con todos los posibles movimientos de un jugador
-%la lista tiene números del 12-19,22-29, etc.
+%la lista tiene números del 12-19,22-29, y retorna una tupla con las
+%posibles casillas en donde se puede mover.
 posibles_movimientos() ->
-	posibles_movimientos(movimientos()).
+	list_to_tuple(posibles_movimientos(movimientos())).
 
 posibles_movimientos([H|T]) ->
 	Valido = othello:check_move(H, othello:board(), othello:directions(), -1),
