@@ -15,6 +15,7 @@
 -export([start/1, start/0, stop/1, stop/0, connect/1, connect/2, disconnect/1, disconnect/0]).
 -compile(export_all).
 -include("othello.hrl").
+-include("minimax.hrl").
 
 connect(Color)        -> call(agent, connect, Color).
 disconnect()          -> call(agent, disconnect).
@@ -97,14 +98,33 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
 	    ok
     end.
     
-make_move(Player, Board, _Depth, _Border) -> 57. %Esta tupla se cambia por un número
+%make_move(Player, Board, _Depth, _Border) -> 57. %Esta tupla se cambia por un número
+
+make_move(Player, Board, Depth, Border) ->
+	%Se actualiza el estado con el tablero actual, la profundidad y los posibles movimientos.
+	State = #minimax{board=Board, depth=Depth, childs=get_moves()},
+	{Move, _} = alpha_beta_search(State).
+	Move.
+
+alpha_beta_search(State) ->
+	max_value(State).
+
+
+max_value(State) ->
+	if State#minimax{depth} == State#minimax{search} ->
+		State#minimax{move};
+	true ->
+
+
+
+
 
 %Obtiene los posibles movimientos de un jugador
 %Se le envía una lista con todos los posibles movimientos de un jugador
 %la lista tiene números del 12-19,22-29, y retorna una tupla con las
 %posibles casillas en donde se puede mover.
 get_moves() ->
-	list_to_tuple(get_moves(valid_moves())).
+	get_moves(valid_moves()).
 
 get_moves([H|T]) ->
 	Valido = othello:check_move(H, othello:board(), othello:directions(), -1),
@@ -129,6 +149,9 @@ valid_moves() ->
 	lists:seq(82,89).
 
 
+
+%%%%%%%% Función de Evaluación %%%%%%%%%%%%%%%%%%%
+%%%%%%%% Falta: tomar en cuenta la estabilidad de una posicion
 %Valor de cada posición en el tablero, los valores
 %fueron tomados y adaptados del score asignado al juego
 %reversi de Microsoft Windows http://www.samsoft.org.uk/reversi/strategy.htm#position
