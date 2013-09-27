@@ -102,38 +102,111 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
 
 make_move(Player, Board, Depth, Border) ->
 	%Se actualiza el estado con el tablero actual, la profundidad y los posibles movimientos.
-	State = #minimax{board=Board, depth=Depth},
-	{Move, _} = alpha_beta_search(State).
+	State = #minimax{board=Board, depth=Depth, turn=Player},
+	Move = alpha_beta_search(State),
+	io:format("Move es ~w~n", [Move]),
 	Move.
 
 
 %Algoritmo Alfa-Beta implementado con el pseudocógido del libro AIMA pág. 170
 alpha_beta_search(State) ->
-	max_value(State).
+	max_value(State, 100000, -100000).
 
-max_value(State) ->
+max_value(State, Alpha, Beta) ->
 	%Se comprueba si ya se llegó al objetivo
 	if State#minimax.depth == State#minimax.search ->
 		State#minimax.move;
 	true ->
-		V = -100000,
-		max_value(State, V)
+	%En otro caso se obtienen los posibles movimientos del estado actual
+		State#minimax{childs = get_moves()},
+		Moves = State#minimax.childs,
+		State#minimax{cost=-100000}, %Se inicia en beta porque el algoritmo inicia V en -100000
+		foreach_max_value(Moves, Alpha, Beta, State)
+	end.
+
+foreach_max_value([H | T], Alpha, Beta, State) ->
+	Temp = State#minimax.cost,
+	State#minimax{turn = 1},
+	Cost = State#minimax.cost,
+	State#minimax{cost=Cost+1},
+	V = max(Temp, min_value(H, Alpha, Beta)),
+	if V > Beta ->
+		%Se poda el árbol
+		State#minimax{move= V},
+		State#minimax.move;
+	true ->
+		Alpha = max(Alpha, V),
+		State#minimax{alfa = Alpha},
+		State#minimax{cost = V},
+		foreach_max_value(T, Alpha, Beta, State)
 	end;
 
-max_value(State, V) ->
-	%Se obtiene la lista de hijos del estado actual
-	State#minimax
-	[H|T] = State#minimax{childs},
-	%NewState = Moverse a H
-	%Actualizar la lista de childs del estado actual
-	State#minimax{childs = T},
-	V_aux = max(V, min_value(NewState)),
-
-	if V_aux > State#minimax{beta} ->
-		V_aux;
+foreach_max_value([H], Alpha, Beta, State) ->
+	Temp = State#minimax.cost,
+	Cost = State#minimax.cost,
+	State#minimax{cost=Cost+1},
+	V = max(Temp, min_value(H, Alpha, Beta)),
+	if V > Beta ->
+		%Se poda el árbol
+		State#minimax{move= V},
+		State#minimax.move;
 	true ->
-		State#minimax{alfa = max(State#minimax{alfa}, Valor)}  
+		Alpha = max(Alpha, V),
+		State#minimax{alfa = Alpha},
+		State#minimax{cost = V}
+	end;
 
+foreach_max_value([], _Alpha, _Beta, State) ->
+	State#minimax.cost.
+
+
+min_value(State, Alpha, Beta) ->
+	%Se comprueba si ya se llegó al objetivo
+	if State#minimax.depth == State#minimax.search ->
+		State#minimax.move;
+	true ->
+	%En otro caso se obtienen los posibles movimientos del estado actual
+		State#minimax{childs = get_moves()},
+		Moves = State#minimax.childs,
+		State#minimax{cost=100000}, %Se inicia en alfa porque el algoritmo inicia V en 100000
+		foreach_min_value(Moves, Alpha, Beta, State)
+	end.
+
+foreach_min_value([H | T], Alpha, Beta, State) ->
+	Temp = State#minimax.cost,
+	State#minimax{turn = -1},
+	Cost = State#minimax.cost,
+	State#minimax{cost=Cost+1},
+	V = min(Temp, max_value(H, Alpha, Beta)),
+	if V =< Alpha ->
+		%Se poda el árbol
+		State#minimax{move=V},
+		State#minimax.move;
+	true ->
+		Beta = min(Beta, V),
+		State#minimax{beta = Beta},
+		State#minimax{cost = V},
+		foreach_min_value(T, Alpha, Beta, State)
+	end;
+
+foreach_min_value([H], Alpha, Beta, State) ->
+	Temp = State#minimax.cost,
+	State#minimax{turn = -1},
+	Cost = State#minimax.cost,
+	State#minimax{cost=Cost+1},
+	V = min(Temp, min_value(H, Alpha, Beta)),
+	if V =< Alpha ->
+		%Se poda el árbol
+		State#minimax{move=V},
+		State#minimax.move;
+	true ->
+		Beta = min(Beta, V),
+		State#minimax{beta = Beta},
+		State#minimax{cost = V}
+	end;
+
+foreach_min_value([], _Alpha, _Beta, State) ->
+	State#minimax.cost.
 
 
 
