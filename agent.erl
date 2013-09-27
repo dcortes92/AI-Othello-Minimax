@@ -102,52 +102,57 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
     
 %make_move(Player, Board, _Depth, _Border) -> 57. %Esta tupla se cambia por un número
 
-make_move(Player, Board, Depth, _Border) ->
+make_move(Player, Board, Depth, Border) ->
 	io:format("Player es ~w~n", [Player]),
-					                         %Alpha,  Beta,
-	alpha_beta_search(Depth, Board, -100000, 100000, Player).
+					                              %Alpha,  Beta
+	alpha_beta_search(-1, Depth, Board, Border, -100000, 100000, Player).
 
 
-alpha_beta_search(Depth, Board, Alpha, Beta, Player) ->
-	Vec = [H | T] = get_moves(Player, Board),
-	io:format("Los Vecinos son ~w~n", [Vec]),
+alpha_beta_search(BestPos, Depth, Board, Border, Alpha, Beta, Player) ->
 	if Depth == 0 ->
-		io:format("H ~w~n", [H]),
-		H;
+		eval_function(valid_moves(), Board, Player, 0, 0);
 	true ->
-		%Si jugador es 1: Blancas
-		if Player == 1 ->
-			foreach_max_value([H | T], Board, Depth, Alpha, Beta, Player);
+		Moves = get_moves(Player, Board, Border),
+		
+		if Player == -1 -> %Mueven las negras
+			foreach_max_value(Moves, BestPos, Board, Border, Depth, Alpha, Beta, Player);
 		true ->
-			foreach_min_value([H | T], Board, Depth, Alpha, Beta, Player)
+			foreach_min_value(Moves, BestPos, Board, Border, Depth, Alpha, Beta, Player)
 		end
 	end.
 
 
-foreach_max_value([H | T], Board, Depth, Alpha, Beta, Player) ->
-	%Recordar moverse en el
-	NewBoard = setelement(H, Board, Player),
-	Alpha_New = max(Alpha, alpha_beta_search(Depth - 1, NewBoard, Alpha, Beta, -Player)),	
+foreach_max_value([H | T], BestPos, Board, Border, Depth, Alpha, Beta, Player) ->
+	NewBoard = othello:make_move(H, Board, othello:directions(), Player),
+	NewBorder = othello:new_frontier(Border, H, NewBoard),
+
+	Alpha_New = max(Alpha, alpha_beta_search(H, Depth-1, NewBoard, NewBorder, Alpha, Beta, -Player)),
+
 	if (Beta =< Alpha_New) or (T == []) ->
 		H;
 	true ->
-		foreach_max_value(T, Board, Depth, Alpha_New, Beta, Player)
-	end.
-
-
-foreach_min_value([H | T], Board, Depth, Alpha, Beta, Player) ->
-	%Recordar moverse en el	
-	NewBoard = setelement(H, Board, Player),
-	Beta_New = min(Beta, alpha_beta_search (Depth - 1, NewBoard, Alpha, Beta, -Player)),
-	if (Alpha >= Beta_New) or (T == [])->
-		H;
-	true ->
-		foreach_min_value(T, Board, Depth, Alpha, Beta_New, Player)
+		foreach_max_value(T, H, Board, Border, Depth, Alpha_New, Beta, Player)
 	end;
 
-foreach_min_value([], _Board, _Depth, _Alpha, Beta, _Player) ->
-	Beta.
+foreach_max_value([], BestPos, _Board, _Border, _Depth, _Alpha, _Beta, _Player) ->
+	BestPos.
 
+
+foreach_min_value([H | T], BestPos, Board, Border, Depth, Alpha, Beta, Player) ->
+	NewBoard = othello:make_move(H, Board, othello:directions(), Player),
+	NewBorder = othello:new_frontier(Border, H, NewBoard),
+
+	Beta_New = min(Beta, alpha_beta_search(H, Depth-1, NewBoard, NewBorder, Alpha, Beta, -Player)),
+
+	if (Alpha >= Beta) or (T == []) ->
+		H;
+	true ->
+		foreach_min_value(T, H, Board, Border, Depth, Alpha, Beta_New, Player)
+	end;	
+
+
+foreach_min_value([], BestPos, _Board, _Border, _Depth, _Alpha, _Beta, _Player) ->
+	BestPos.
 
 
 
@@ -157,19 +162,15 @@ foreach_min_value([], _Board, _Depth, _Alpha, Beta, _Player) ->
 %Se le envía una lista con todos los posibles movimientos de un jugador
 %la lista tiene números del 12-19,22-29, y retorna una tupla con las
 %posibles casillas en donde se puede mover.
-get_moves(Player, Board) ->
-	io:format("Obteniendo moves de ~w~n", [Player]),
-	get_moves(valid_moves(), Player, Board).
-
-get_moves([H|T], Player, Board) ->
+get_moves(Player, Board, [H | T]) ->
 	Valido = othello:check_move(H, Board, othello:directions(), Player),
 	if Valido ->
-		[H |  get_moves(T, Player, Board)];
+		[H |  get_moves(Player, Board, T)];
 	true ->
-		get_moves(T, Player, Board)
+		get_moves(Player, Board, T)
 	end;
 
-get_moves([], _Player, _Board) -> [].
+get_moves(_Player, _Board, []) -> [].
 
 
 %Genera la lista de movimientos que utiliza get_moves
@@ -275,3 +276,25 @@ score(54) -> 4;
 score(57) -> 4;
 
 score(_) -> 0.
+
+
+%Numero de piezas
+num_pieces([H | T], Board, Player)->
+	if element(H, Board) == Player ->
+		1+num_pieces(T, Board, Player);
+	true ->
+		num_pieces(T, Board, Player)
+	end;
+
+num_pieces([], _Board, _Player) -> 0.
+
+
+%Función de Evaluación
+eval_function([H | T], Board, Player, Heu, Pieces) ->
+	if element(H, Board) == Player -> %Jugador 1
+		eval_function(T, Board, Player, Heu + score(H), Pieces + 1);
+	true -> %Jugador 2
+		eval_function(T, Board, Player, Heu - score(H), Pieces - 1)
+	end;
+
+eval_function([], _Board, _Player, Heu, Pieces) -> Heu + Pieces.
