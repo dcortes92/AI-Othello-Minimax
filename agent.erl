@@ -102,18 +102,37 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
 
 make_move(Player, Board, Depth, Border) ->
 	%Se actualiza el estado con el tablero actual, la profundidad y los posibles movimientos.
-	State = #minimax{board=Board, depth=Depth, childs=get_moves()},
+	State = #minimax{board=Board, depth=Depth},
 	{Move, _} = alpha_beta_search(State).
 	Move.
 
+
+%Algoritmo Alfa-Beta implementado con el pseudocógido del libro AIMA pág. 170
 alpha_beta_search(State) ->
 	max_value(State).
 
-
 max_value(State) ->
-	if State#minimax{depth} == State#minimax{search} ->
-		State#minimax{move};
+	%Se comprueba si ya se llegó al objetivo
+	if State#minimax.depth == State#minimax.search ->
+		State#minimax.move;
 	true ->
+		V = -100000,
+		max_value(State, V)
+	end;
+
+max_value(State, V) ->
+	%Se obtiene la lista de hijos del estado actual
+	State#minimax
+	[H|T] = State#minimax{childs},
+	%NewState = Moverse a H
+	%Actualizar la lista de childs del estado actual
+	State#minimax{childs = T},
+	V_aux = max(V, min_value(NewState)),
+
+	if V_aux > State#minimax{beta} ->
+		V_aux;
+	true ->
+		State#minimax{alfa = max(State#minimax{alfa}, Valor)}  
 
 
 
