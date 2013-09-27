@@ -103,6 +103,7 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
 make_move(Player, Board, Depth, Border) ->
 	%Se actualiza el estado con el tablero actual, la profundidad y los posibles movimientos.
 	State = #minimax{board=Board, depth=Depth, turn=Player},
+	io:format("Entrando a alfabeta~n"),
 	Move = alpha_beta_search(State),
 	io:format("Move es ~w~n", [Move]),
 	Move.
@@ -115,13 +116,19 @@ alpha_beta_search(State) ->
 max_value(State, Alpha, Beta) ->
 	%Se comprueba si ya se llegó al objetivo
 	if State#minimax.depth == State#minimax.search ->
+		io:format("Entra primer if~n"),
 		State#minimax.move;
 	true ->
-	%En otro caso se obtienen los posibles movimientos del estado actual
-		State#minimax{childs = get_moves()},
-		Moves = State#minimax.childs,
-		State#minimax{cost=-100000}, %Se inicia en beta porque el algoritmo inicia V en -100000
-		foreach_max_value(Moves, Alpha, Beta, State)
+		io:format("Entrando primer else~n"),
+	%En otro caso se obtienen los posibles movimientos del estado actual "$/6A"
+		Moves = get_moves(State#minimax.turn),
+		%State#minimax{childs = Moves},
+		%MovesTemp = State#minimax.childs,
+		
+		State#minimax{cost=-234567},
+		MovesTemp = State#minimax.cost,
+		State#minimax.move, %Se inicia en beta porque el algoritmo inicia V en -100000
+		%foreach_max_value(Moves, Alpha, Beta, State)
 	end.
 
 foreach_max_value([H | T], Alpha, Beta, State) ->
@@ -166,8 +173,9 @@ min_value(State, Alpha, Beta) ->
 		State#minimax.move;
 	true ->
 	%En otro caso se obtienen los posibles movimientos del estado actual
-		State#minimax{childs = get_moves()},
+		State#minimax{childs = get_moves(State#minimax.turn)},
 		Moves = State#minimax.childs,
+		io:format("Los childs de ~w son ~w~n", [State#minimax.turn], [Moves]),
 		State#minimax{cost=100000}, %Se inicia en alfa porque el algoritmo inicia V en 100000
 		foreach_min_value(Moves, Alpha, Beta, State)
 	end.
@@ -215,18 +223,19 @@ foreach_min_value([], _Alpha, _Beta, State) ->
 %Se le envía una lista con todos los posibles movimientos de un jugador
 %la lista tiene números del 12-19,22-29, y retorna una tupla con las
 %posibles casillas en donde se puede mover.
-get_moves() ->
-	get_moves(valid_moves()).
+get_moves(Player) ->
+	io:format("Obteniendo moves de ~w~n", [Player]),
+	get_moves(valid_moves(), Player).
 
-get_moves([H|T]) ->
-	Valido = othello:check_move(H, othello:board(), othello:directions(), -1),
+get_moves([H|T], Player) ->
+	Valido = othello:check_move(H, othello:board(), othello:directions(), Player),
 	if Valido ->
-		[H |  get_moves(T)];
+		[H |  get_moves(T, Player)];
 	true ->
-		get_moves(T)
+		get_moves(T, Player)
 	end;
 
-get_moves([]) -> [].
+get_moves([], _Player) -> [].
 
 
 %Genera la lista de movimientos que utiliza get_moves
