@@ -64,8 +64,10 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
 	{your_turn, #game{current=Player, board=Board, border=Border}} ->
 	    io:format("MY TURN!!!~n"),
 	    Move = make_move(color(Player), Board, Depth, Border),
-	    % io:format("agent ~w: my turn ~w, state ~w~n", [self(), Move, Board]),
+	    io:format("Move es ~w~n", [Move]),
 	    server:make_move(Player, Move),
+	    %server:restore_board(Player, Board),
+	    % io:format("agent ~w: my turn ~w, state ~w~n", [self(), Move, Board]),
 	    loop(Agent, LbDepth, TxtDepth, ExitButton, Depth);
 	{your_turn, X} ->
 	    io:format("this is what I received ~w~n", [X]),
@@ -100,121 +102,53 @@ loop(Agent, LbDepth, TxtDepth, ExitButton, Depth) ->
     
 %make_move(Player, Board, _Depth, _Border) -> 57. %Esta tupla se cambia por un número
 
-make_move(Player, Board, Depth, Border) ->
-	%Se actualiza el estado con el tablero actual, la profundidad y los posibles movimientos.
-	State = #minimax{board=Board, depth=Depth, turn=Player},
-	io:format("Entrando a alfabeta~n"),
-	Move = alpha_beta_search(State),
-	io:format("Move es ~w~n", [Move]),
-	Move.
+make_move(Player, Board, Depth, _Border) ->
+	io:format("Player es ~w~n", [Player]),
+					                         %Alpha,  Beta,
+	alpha_beta_search(Depth, Board, -100000, 100000, Player).
 
 
-%Algoritmo Alfa-Beta implementado con el pseudocógido del libro AIMA pág. 170
-alpha_beta_search(State) ->
-	max_value(State, 100000, -100000).
-
-max_value(State, Alpha, Beta) ->
-	%Se comprueba si ya se llegó al objetivo
-	if State#minimax.depth == State#minimax.search ->
-		io:format("Entra primer if~n"),
-		State#minimax.move;
+alpha_beta_search(Depth, Board, Alpha, Beta, Player) ->
+	Vec = [H | T] = get_moves(Player, Board),
+	io:format("Los Vecinos son ~w~n", [Vec]),
+	if Depth == 0 ->
+		io:format("H ~w~n", [H]),
+		H;
 	true ->
-		io:format("Entrando primer else~n"),
-	%En otro caso se obtienen los posibles movimientos del estado actual "$/6A"
-		Moves = get_moves(State#minimax.turn),
-		%State#minimax{childs = Moves},
-		%MovesTemp = State#minimax.childs,
-		
-		State#minimax{cost=-234567},
-		MovesTemp = State#minimax.cost,
-		State#minimax.move, %Se inicia en beta porque el algoritmo inicia V en -100000
-		%foreach_max_value(Moves, Alpha, Beta, State)
+		%Si jugador es 1: Blancas
+		if Player == 1 ->
+			foreach_max_value([H | T], Board, Depth, Alpha, Beta, Player);
+		true ->
+			foreach_min_value([H | T], Board, Depth, Alpha, Beta, Player)
+		end
 	end.
 
-foreach_max_value([H | T], Alpha, Beta, State) ->
-	Temp = State#minimax.cost,
-	State#minimax{turn = 1},
-	Cost = State#minimax.cost,
-	State#minimax{cost=Cost+1},
-	V = max(Temp, min_value(H, Alpha, Beta)),
-	if V > Beta ->
-		%Se poda el árbol
-		State#minimax{move= V},
-		State#minimax.move;
+
+foreach_max_value([H | T], Board, Depth, Alpha, Beta, Player) ->
+	%Recordar moverse en el
+	NewBoard = setelement(H, Board, Player),
+	Alpha_New = max(Alpha, alpha_beta_search(Depth - 1, NewBoard, Alpha, Beta, -Player)),	
+	if (Beta =< Alpha_New) or (T == []) ->
+		H;
 	true ->
-		Alpha = max(Alpha, V),
-		State#minimax{alfa = Alpha},
-		State#minimax{cost = V},
-		foreach_max_value(T, Alpha, Beta, State)
-	end;
-
-foreach_max_value([H], Alpha, Beta, State) ->
-	Temp = State#minimax.cost,
-	Cost = State#minimax.cost,
-	State#minimax{cost=Cost+1},
-	V = max(Temp, min_value(H, Alpha, Beta)),
-	if V > Beta ->
-		%Se poda el árbol
-		State#minimax{move= V},
-		State#minimax.move;
-	true ->
-		Alpha = max(Alpha, V),
-		State#minimax{alfa = Alpha},
-		State#minimax{cost = V}
-	end;
-
-foreach_max_value([], _Alpha, _Beta, State) ->
-	State#minimax.cost.
-
-
-min_value(State, Alpha, Beta) ->
-	%Se comprueba si ya se llegó al objetivo
-	if State#minimax.depth == State#minimax.search ->
-		State#minimax.move;
-	true ->
-	%En otro caso se obtienen los posibles movimientos del estado actual
-		State#minimax{childs = get_moves(State#minimax.turn)},
-		Moves = State#minimax.childs,
-		io:format("Los childs de ~w son ~w~n", [State#minimax.turn], [Moves]),
-		State#minimax{cost=100000}, %Se inicia en alfa porque el algoritmo inicia V en 100000
-		foreach_min_value(Moves, Alpha, Beta, State)
+		foreach_max_value(T, Board, Depth, Alpha_New, Beta, Player)
 	end.
 
-foreach_min_value([H | T], Alpha, Beta, State) ->
-	Temp = State#minimax.cost,
-	State#minimax{turn = -1},
-	Cost = State#minimax.cost,
-	State#minimax{cost=Cost+1},
-	V = min(Temp, max_value(H, Alpha, Beta)),
-	if V =< Alpha ->
-		%Se poda el árbol
-		State#minimax{move=V},
-		State#minimax.move;
+
+foreach_min_value([H | T], Board, Depth, Alpha, Beta, Player) ->
+	%Recordar moverse en el	
+	NewBoard = setelement(H, Board, Player),
+	Beta_New = min(Beta, alpha_beta_search (Depth - 1, NewBoard, Alpha, Beta, -Player)),
+	if (Alpha >= Beta_New) or (T == [])->
+		H;
 	true ->
-		Beta = min(Beta, V),
-		State#minimax{beta = Beta},
-		State#minimax{cost = V},
-		foreach_min_value(T, Alpha, Beta, State)
+		foreach_min_value(T, Board, Depth, Alpha, Beta_New, Player)
 	end;
 
-foreach_min_value([H], Alpha, Beta, State) ->
-	Temp = State#minimax.cost,
-	State#minimax{turn = -1},
-	Cost = State#minimax.cost,
-	State#minimax{cost=Cost+1},
-	V = min(Temp, min_value(H, Alpha, Beta)),
-	if V =< Alpha ->
-		%Se poda el árbol
-		State#minimax{move=V},
-		State#minimax.move;
-	true ->
-		Beta = min(Beta, V),
-		State#minimax{beta = Beta},
-		State#minimax{cost = V}
-	end;
+foreach_min_value([], _Board, _Depth, _Alpha, Beta, _Player) ->
+	Beta.
 
-foreach_min_value([], _Alpha, _Beta, State) ->
-	State#minimax.cost.
+
 
 
 
@@ -223,19 +157,19 @@ foreach_min_value([], _Alpha, _Beta, State) ->
 %Se le envía una lista con todos los posibles movimientos de un jugador
 %la lista tiene números del 12-19,22-29, y retorna una tupla con las
 %posibles casillas en donde se puede mover.
-get_moves(Player) ->
+get_moves(Player, Board) ->
 	io:format("Obteniendo moves de ~w~n", [Player]),
-	get_moves(valid_moves(), Player).
+	get_moves(valid_moves(), Player, Board).
 
-get_moves([H|T], Player) ->
-	Valido = othello:check_move(H, othello:board(), othello:directions(), Player),
+get_moves([H|T], Player, Board) ->
+	Valido = othello:check_move(H, Board, othello:directions(), Player),
 	if Valido ->
-		[H |  get_moves(T, Player)];
+		[H |  get_moves(T, Player, Board)];
 	true ->
-		get_moves(T, Player)
+		get_moves(T, Player, Board)
 	end;
 
-get_moves([], _Player) -> [].
+get_moves([], _Player, _Board) -> [].
 
 
 %Genera la lista de movimientos que utiliza get_moves

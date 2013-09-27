@@ -15,7 +15,7 @@
 -export([start/0, start/1, stop/0]).
 
 % User API
--export([init/0, connect/1, disconnect/0, get_status/0, make_move/2, proxy/0, call_proxy/3, new_game/0]).
+-export([init/0, connect/1, disconnect/0, get_status/0, make_move/2, proxy/0, call_proxy/3, new_game/0, make_move_special/2]).
 
 -include("othello.hrl").
 
@@ -24,6 +24,8 @@ connect(Color)           -> call(connect, Color).
 disconnect()             -> call(disconnect).
 get_status ()            -> call(get_status).
 make_move  (Color, Pos)  -> call(move,  {Color, Pos}).
+make_move_special  (Color, Pos)  -> call(move_special,  {Color, Pos}).
+restore  (Color, Board)  -> call(restore_board,  {Color, Board}).
 new_game()               -> oserver ! {new_game, self()}.
 
 %%====================================================================
@@ -102,6 +104,14 @@ event_loop(Tournament, Iteration, Playing, #game{current=Player,border=Bder}=Sta
 		    timer(0, State#game.seconds),
 		    notify_players(black, NewState),
 		    event_loop(Tournament, 0, true, NewState); 
+
+		{restore_board, Player, T_Board} ->
+			#game{white=W, black=B, board=Board} = State,
+		    NewState = #game{white=W, black=B, board=T_Board, current=current(Player), border=othello:border()},
+		    display:change(canvas, Board, T_Board),
+		    timer(0, State#game.seconds),
+		    notify_players(current(Player), NewState),
+		    event_loop(Tournament, 0, true, NewState);
 
 		{get_status, Client} ->
 		    Client ! {ok, State},
@@ -202,6 +212,8 @@ call(Id) ->
 
 %%--------------------------------------------------------------------
 
+current(-1) -> black;
+current(1) -> white.
 
 other(white) -> black;
 other(black) -> white.
@@ -209,7 +221,7 @@ other(black) -> white.
 color(white) ->  1;
 color(black) -> -1.
 
-%% MAKE_MOVE
+%% make_move
 move(Player, _Pos, State=#game{current=Other}) when Player /= Other ->
     % io:format("server: not your turn player = ~w, other = ~w, state = ~w...\n", [Player, Other, State]),
     {{not_your_turn, Player}, State};
