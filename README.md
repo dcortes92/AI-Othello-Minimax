@@ -7,3 +7,11 @@ de agentes autónomos para ajedrez, damas, y un sin fin de juegos de dos contrin
 En esta tarea se pretende programar el algoritmo minimax en el contexto de jugar una 
 partida de Othello. El objetivo de este ejercicio es entender bien el algoritmo minimax 
 y las consideraciones prácticas que se deben tener cuando se efectúa su implementación.
+
+Uso:
+
+1. server:start().
+2. agent:start().
+3. seleccionar profundidad del árbol y el color del jugador 1.
+4. agent:start().
+5. seleccionar profundidad del árbol y el color del jugador 2.
